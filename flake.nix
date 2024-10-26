@@ -35,6 +35,13 @@
           src = ./.;
         };
 
+        packages.docker = pkgs.dockerTools.buildLayeredImage {
+            name = "low-noise-bot";
+            tag = "latest";
+            config.Cmd = "${defaultPackage}/bin/low-noise-bot";
+        };
+
+
         devShell = pkgs.mkShell {
           nativeBuildInputs = [ toolchain ];
         };

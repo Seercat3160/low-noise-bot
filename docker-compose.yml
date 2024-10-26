@@ -1,0 +1,9 @@
+services:
+  low-noise-bot:
+    image: low-noise-bot:latest
+    # These should come from .env
+    #environment:
+    #  - DISCORD_TOKEN="your token here"
+    #  - DISCORD_GUILD="your guild id here"
+    env_file: .env
+    restart: unless-stopped
