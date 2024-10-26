@@ -46,9 +46,9 @@
           src = ./.;
         };
 
-        packages.container = pkgs.dockerTools.buildLayeredImage {
+        packages.container = pkgs.dockerTools.streamLayeredImage {
           name = "low-noise-bot";
-          tag = "latest";
+          tag = "latest-${system}";
           config.Cmd = "${packages.default}/bin/low-noise-bot";
         };
 
