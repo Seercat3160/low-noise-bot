@@ -6,6 +6,10 @@ edition = "2021"
 [lints.clippy]
 pedantic = "warn"
 
+[profile.release]
+lto = true
+strip = true
+
 [dependencies]
 poise = "0.6.1"
 tokio = { version = "1.41.0", features = ["full"] }
