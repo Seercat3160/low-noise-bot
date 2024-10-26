@@ -1,50 +1,62 @@
 {
-  inputs = {
-    flake-utils.url = "github:numtide/flake-utils";
-    naersk.url = "github:nix-community/naersk";
+  description = "low-noise-bot";
 
+  inputs = {
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    naersk.url = "github:nix-community/naersk";
     nixpkgs-mozilla = {
       url = "github:mozilla/nixpkgs-mozilla";
       flake = false;
     };
   };
 
-  outputs = { self, flake-utils, naersk, nixpkgs, nixpkgs-mozilla }:
-    flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = (import nixpkgs) {
+  outputs = inputs @ {flake-parts, ...}:
+    flake-parts.lib.mkFlake {inherit inputs;} {
+      systems = ["x86_64-linux" "aarch64-linux"];
+      perSystem = {
+        config,
+        self',
+        inputs',
+        pkgs,
+        system,
+        ...
+      }: let
+        pkgs = (import inputs.nixpkgs) {
           inherit system;
 
           overlays = [
-            (import nixpkgs-mozilla)
+            (import inputs.nixpkgs-mozilla)
           ];
         };
 
-        toolchain = (pkgs.rustChannelOf {
-          rustToolchain = ./rust-toolchain.toml;
-          sha256 = "sha256-yMuSb5eQPO/bHv+Bcf/US8LVMbf/G/0MSfiPwBhiPpk=";
-        }).rust;
+        toolchain =
+          (pkgs.rustChannelOf {
+            rustToolchain = ./rust-toolchain.toml;
+            sha256 = "sha256-yMuSb5eQPO/bHv+Bcf/US8LVMbf/G/0MSfiPwBhiPpk=";
+          })
+          .rust;
 
-        naersk' = pkgs.callPackage naersk {
+        naersk' = pkgs.callPackage inputs.naersk {
           cargo = toolchain;
           rustc = toolchain;
         };
-
       in rec {
-        defaultPackage = naersk'.buildPackage {
+        packages.default = naersk'.buildPackage {
           src = ./.;
         };
 
-        packages.docker = pkgs.dockerTools.buildLayeredImage {
-            name = "low-noise-bot";
-            tag = "latest";
-            config.Cmd = "${defaultPackage}/bin/low-noise-bot";
+        packages.container = pkgs.dockerTools.buildLayeredImage {
+          name = "low-noise-bot";
+          tag = "latest";
+          config.Cmd = "${packages.default}/bin/low-noise-bot";
         };
 
-
-        devShell = pkgs.mkShell {
-          nativeBuildInputs = [ toolchain ];
+        devShells.default = pkgs.mkShell {
+          nativeBuildInputs = [toolchain];
         };
-      }
-    );
+
+        formatter = pkgs.alejandra;
+      };
+    };
 }
