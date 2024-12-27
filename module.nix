@@ -6,16 +6,13 @@
     ...
   }: let
     cfg = config.seercat.services.low-noise-bot;
+    pkg = withSystem pkgs.stdenv.hostPlatform.system (
+      {config, ...}:
+        config.packages.default
+    );
   in {
     options.seercat.services.low-noise-bot = {
       enable = lib.options.mkEnableOption "low-noise-bot";
-
-      package = lib.options.mkPackageOption pkgs "low-noise-bot" {
-        default = withSystem pkgs.stdenv.hostPlatform.system (
-          {config, ...}:
-            config.packages.default
-        );
-      };
 
       discordTokenFile = lib.options.mkOption {
         type = lib.types.nullOr (
@@ -67,7 +64,7 @@
 
         serviceConfig = {
           Restart = "on-failure";
-          ExecStart = "${cfg.package}/bin/low-noise-bot";
+          ExecStart = "${pkg}/bin/low-noise-bot";
           DynamicUser = "yes";
           # Use systemd credentials to pass the secrets to the program,
           # so the secrets can be readable by root only despite the service
