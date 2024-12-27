@@ -11,11 +11,31 @@ type Context<'a> = poise::Context<'a, Data, Error>;
 async fn main() {
     println!("Discord bot is starting...");
 
-    let token = std::env::var("DISCORD_TOKEN").expect("missing DISCORD_TOKEN");
-    let guild_id: u64 = std::env::var("DISCORD_GUILD")
-        .expect("missing DISCORD_GUILD")
+    // read config from environment variables
+    let mut token = std::env::var("DISCORD_TOKEN").ok();
+    let mut guild_id = std::env::var("DISCORD_GUILD").ok();
+
+    // read config from [systemd credentials](https://systemd.io/CREDENTIALS/), overriding environment variables if both are present
+    if let Ok(systemd_cred_path) = std::env::var("CREDENTIALS_DIRECTORY") {
+        // if file `$path/discord_token` exists, use it's contents as the discord token
+        if let Ok(token_string) =
+            std::fs::read_to_string(format!("{systemd_cred_path}/discord_token"))
+        {
+            token = Some(token_string);
+        }
+        // if file `$path/discord_guild` exists, use it's contents as the guild ID
+        if let Ok(guild_id_string) =
+            std::fs::read_to_string(format!("{systemd_cred_path}/discord_guild"))
+        {
+            guild_id = Some(guild_id_string);
+        }
+    }
+
+    let token: String = token.expect("missing DISCORD_TOKEN");
+    let guild_id: u64 = guild_id
+        .expect("missing DISCORD_TOKEN")
         .parse()
-        .expect("invalid DISCORD_GUILD, should be a non-zero u64");
+        .expect("invalid Discord guild ID provided");
 
     let intents = serenity::GatewayIntents::non_privileged();
 
