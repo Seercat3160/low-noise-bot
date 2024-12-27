@@ -31,11 +31,17 @@ async fn main() {
         }
     }
 
-    let token: String = token.expect("missing DISCORD_TOKEN");
+    let token: String = token.expect("DISCORD_TOKEN should be set");
     let guild_id: u64 = guild_id
-        .expect("missing DISCORD_TOKEN")
+        .clone()
+        .expect("DISCORD_GUILD should be set")
         .parse()
-        .expect("invalid Discord guild ID provided");
+        .unwrap_or_else(|_| {
+            panic!(
+                "Discord guild ID provided should be valid: got '{}'",
+                guild_id.unwrap()
+            )
+        });
 
     let intents = serenity::GatewayIntents::non_privileged();
 
