@@ -109,11 +109,11 @@
             assertions = [
               {
                 assertion = cfg.discordTokenFile != null;
-                message = "A Discord token must be provided";
+                message = "low-noise-bot: A Discord token must be provided";
               }
               {
                 assertion = cfg.discordGuildFile != null;
-                message = "A Discord guild ID must be provided";
+                message = "low-noise-bot: A Discord guild ID must be provided";
               }
             ];
 
