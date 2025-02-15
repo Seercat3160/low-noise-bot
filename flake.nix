@@ -5,10 +5,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     naersk.url = "github:nix-community/naersk";
-    nixpkgs-mozilla = {
-      url = "github:mozilla/nixpkgs-mozilla";
-      flake = false;
-    };
+    fenix.url = "github:nix-community/fenix";
   };
 
   outputs = inputs @ {flake-parts, ...}:
@@ -23,20 +20,10 @@
         system,
         ...
       }: let
-        pkgs = (import inputs.nixpkgs) {
-          inherit system;
-
-          overlays = [
-            (import inputs.nixpkgs-mozilla)
-          ];
+        toolchain = inputs.fenix.packages.${system}.fromToolchainFile {
+          file = ./rust-toolchain.toml;
+          sha256 = "sha256-yMuSb5eQPO/bHv+Bcf/US8LVMbf/G/0MSfiPwBhiPpk=";
         };
-
-        toolchain =
-          (pkgs.rustChannelOf {
-            rustToolchain = ./rust-toolchain.toml;
-            sha256 = "sha256-yMuSb5eQPO/bHv+Bcf/US8LVMbf/G/0MSfiPwBhiPpk=";
-          })
-          .rust;
 
         naersk' = pkgs.callPackage inputs.naersk {
           cargo = toolchain;
@@ -45,12 +32,6 @@
       in rec {
         packages.default = naersk'.buildPackage {
           src = ./.;
-        };
-
-        packages.container = pkgs.dockerTools.streamLayeredImage {
-          name = "low-noise-bot";
-          tag = "latest-${system}";
-          config.Cmd = "${packages.default}/bin/low-noise-bot";
         };
 
         devShells.default = pkgs.mkShell {
