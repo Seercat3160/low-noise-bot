@@ -91,9 +91,24 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn({
         let sm = client.shard_manager.clone();
         async move {
-            tokio::signal::ctrl_c().await.unwrap();
+            #[cfg(unix)]
+            {
+                use tokio::signal::unix::{signal, SignalKind};
 
-            info!("Got Ctrl-C, shutting down");
+                let mut signal_terminate = signal(SignalKind::terminate()).unwrap();
+                let mut signal_interrupt = signal(SignalKind::interrupt()).unwrap();
+
+                tokio::select! {
+                    _ = signal_terminate.recv() => tracing::debug!("Received SIGTERM."),
+                    _ = signal_interrupt.recv() => tracing::debug!("Received SIGINT."),
+                };
+            }
+            #[cfg(not(unix))]
+            {
+                tokio::signal::ctrl_c().await.unwrap();
+            }
+
+            info!("Received termination signal, shutting down!");
             sm.shutdown_all().await;
         }
     });
