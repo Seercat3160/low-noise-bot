@@ -10,6 +10,10 @@ use poise::serenity_prelude as serenity;
 
 use super::BotModule;
 
+// See https://discord.com/developers/docs/resources/channel#pin-message
+// As of 2025-02-16, it says "The max pinned messages is 50."
+const MAX_PINS_PER_CHANNEL: usize = 50;
+
 #[derive(Debug)]
 pub(crate) struct PinMessageModule;
 
@@ -51,8 +55,39 @@ async fn pin_message(
             .ephemeral(true),
         )
         .await?;
+    } else if ctx
+        .http()
+        .get_pins(ctx.channel_id())
+        .await
+        .map(|p| p.len())
+        .map(|l| l >= MAX_PINS_PER_CHANNEL)
+        .unwrap_or(false)
+    {
+        // Attempting to pin will fail as the channel is at (or above) the limit
+        warn!(
+            "Failed to pin message {} ({}) for user {}, the channel has too many pinned messages already (limit is {MAX_PINS_PER_CHANNEL})",
+            message.id,
+            message.link(),
+            ctx.author().id,
+        );
+        ctx.send(failure_response_embed_reply!(format!(
+            "📌 Can't pin [that message]({}) because this channel has too many pinned messages: the limit is {MAX_PINS_PER_CHANNEL} per channel",
+            message.link()
+        )))
+        .await?;
     } else {
-        match message.pin(ctx).await {
+        match ctx
+            .http()
+            .pin_message(
+                ctx.channel_id(),
+                message.id,
+                Some(&format!(
+                    "low-noise-bot: pinning message for user {}",
+                    ctx.author().id
+                )),
+            )
+            .await
+        {
             Ok(()) => {
                 info!(
                     "Pinned message {} ({}) at request of user {}",
@@ -105,7 +140,18 @@ async fn unpin_message(
     );
 
     if message.pinned {
-        match message.unpin(ctx).await {
+        match ctx
+            .http()
+            .unpin_message(
+                ctx.channel_id(),
+                message.id,
+                Some(&format!(
+                    "low-noise-bot: unpinning message for user {}",
+                    ctx.author().id
+                )),
+            )
+            .await
+        {
             Ok(()) => {
                 info!(
                     "Unpinned message {} ({}) at request of user {}",
