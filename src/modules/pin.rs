@@ -115,7 +115,7 @@ async fn pin_message(
                 )))
                 .await?;
             }
-        };
+        }
     }
 
     Ok(())
@@ -179,7 +179,7 @@ async fn unpin_message(
                 )))
                 .await?;
             }
-        };
+        }
     } else {
         info!(
             "Message {} ({}) is already not pinned",
